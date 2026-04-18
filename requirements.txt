@@ -1,0 +1,8 @@
+streamlit>=1.35.0
+numpy>=1.26.0
+pandas>=2.2.0
+matplotlib>=3.8.0
+mplhep>=0.3.50
+pyarrow>=15.0.0        # for parquet read/write
+uproot>=5.3.0          # for reading ROOT files (CERN Open Data)
+awkward-array>=2.6.0   # for uproot array operations
