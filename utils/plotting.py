@@ -29,13 +29,21 @@ GRID_ALPHA = 0.25
 
 # ── Helper ──────────────────────────────────────────────────────────────────
 
-def _stats_title(label: str, data: np.ndarray, weights: np.ndarray | None = None) -> str:
+def _stats_title(
+    label: str,
+    data: np.ndarray,
+    weights: np.ndarray | None = None,
+    n_bins: int | None = None,
+) -> str:
     if weights is None:
         weights = np.ones_like(data)
     n     = weights.sum()
     mean  = np.average(data, weights=weights)
     rms   = np.sqrt(np.average((data - mean) ** 2, weights=weights))
-    return f"{label}   Entries: {n:.0f}   Mean: {mean:.2f}   RMS: {rms:.2f}"
+    title = f"{label}   Entries: {n:.0f}   Mean: {mean:.2f}   RMS: {rms:.2f}"
+    if n_bins is not None:
+        title += f"   [{n_bins} bins]"
+    return title
 
 
 def _make_bins(cut_def: CutDef, n_bins: int) -> np.ndarray:
@@ -73,7 +81,7 @@ def plot_variable_panel(
 
     # ── Signal histogram ─────────────────────────────────────────────────
     ax_sig.hist(sig_col, bins=bins, weights=sig_w, color=SIG_COLOR, alpha=0.75)
-    ax_sig.set_title(_stats_title(f"{cut_def.label} Signal", sig_col, sig_w),
+    ax_sig.set_title(_stats_title(f"{cut_def.label} Signal", sig_col, sig_w, n_bins),
                      fontsize=9, pad=4)
     ax_sig.set_xlabel(f"{cut_def.label} {f'[{cut_def.unit}]' if cut_def.unit else ''}",
                       fontsize=9)
@@ -86,7 +94,7 @@ def plot_variable_panel(
 
     # ── Background histogram ─────────────────────────────────────────────
     ax_bkg.hist(bkg_col, bins=bins, weights=bkg_w, color=BKG_COLOR, alpha=0.75)
-    ax_bkg.set_title(_stats_title(f"{cut_def.label} Background", bkg_col, bkg_w),
+    ax_bkg.set_title(_stats_title(f"{cut_def.label} Background", bkg_col, bkg_w, n_bins),
                      fontsize=9, pad=4)
     ax_bkg.set_xlabel(f"{cut_def.label} {f'[{cut_def.unit}]' if cut_def.unit else ''}",
                       fontsize=9)
@@ -111,13 +119,6 @@ def plot_variable_panel(
     if cut_def.direction in (">", "<") and current_cut is not None:
         ax_scan.axvline(current_cut, color="orange", lw=1.5,
                         linestyle="--", label=f"current = {current_cut:.2f}")
-        ax_scan.legend(fontsize=8)
-
-    # Highlight optimal cut
-    if len(scan_y) > 0:
-        best_idx = np.argmax(scan_y)
-        ax_scan.axvline(scan_x[best_idx], color="magenta", lw=1.2,
-                        linestyle=":", label=f"best = {scan_x[best_idx]:.2f}")
         ax_scan.legend(fontsize=8)
 
     return fig

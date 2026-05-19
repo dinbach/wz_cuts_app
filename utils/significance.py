@@ -31,9 +31,16 @@ def asimov_z(S: float, B: float) -> float:
 
 
 SIGNIFICANCE_FORMULAE = {
-    r"$S / \sqrt{B}$":             s_over_sqrtb,
-    r"$S / \sqrt{S+B}$":           s_over_sqrt_splusb,
-    r"Asimov $Z_A$":               asimov_z,
+    "S / √B":       s_over_sqrtb,
+    "S / √(S+B)":   s_over_sqrt_splusb,
+    "Asimov Z_A":   asimov_z,
+}
+
+# LaTeX versions of the keys for use in matplotlib plot labels
+SIGNIFICANCE_PLOT_LABELS = {
+    "S / √B":       r"$S\,/\,\sqrt{B}$",
+    "S / √(S+B)":   r"$S\,/\,\sqrt{S+B}$",
+    "Asimov Z_A":   r"Asimov $Z_A$",
 }
 
 

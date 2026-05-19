@@ -2,6 +2,9 @@
 cuts.py
 -------
 Defines the cut variables, their metadata, and functions to apply them.
+
+Ranges and defaults are calibrated to the real CERN Open Data CSV files
+(Signal.csv, Zjets.csv, ttbar.csv, Diboson.csv).
 """
 
 import numpy as np
@@ -16,7 +19,8 @@ CutDirection = Literal[">", "<", "window"]
 class CutDef:
     """Metadata for a single cut variable."""
     key: str                    # DataFrame column name
-    label: str                  # Display label (supports LaTeX via mplhep)
+    label: str                  # Display label for matplotlib (LaTeX OK)
+    plain_label: str            # Plain-text label for Streamlit widgets (no LaTeX)
     unit: str                   # Unit string, e.g. "GeV" or ""
     direction: CutDirection     # ">" min-cut, "<" max-cut, "window" for both
     default: float | tuple      # Default cut value(s)
@@ -32,49 +36,88 @@ class CutDef:
 
 CUT_DEFS: list[CutDef] = [
     CutDef(
-        key="pT1", label=r"$p_{T1}$", unit="GeV", direction=">",
-        default=25.0, range=(0.0, 100.0), step=1.0,
-        description="Minimum pT of the leading lepton (from Z or W decay).",
+        key="pT1", label=r"$p_{T1}$", plain_label="pT1 (leading lepton)",
+        unit="GeV", direction=">",
+        default=25.0, range=(0.0, 150.0), step=1.0,
+        description=(
+            "Minimum pT of the leading lepton [GeV]. "
+            "Signal leptons from WZ decays tend to be harder (higher pT) "
+            "than fake or mis-identified leptons in the background."
+        ),
     ),
     CutDef(
-        key="pT2", label=r"$p_{T2}$", unit="GeV", direction=">",
-        default=20.0, range=(0.0, 80.0), step=1.0,
-        description="Minimum pT of the sub-leading lepton.",
+        key="pT2", label=r"$p_{T2}$", plain_label="pT2 (sub-leading lepton)",
+        unit="GeV", direction=">",
+        default=20.0, range=(0.0, 100.0), step=1.0,
+        description=(
+            "Minimum pT of the sub-leading lepton [GeV]. "
+            "Tightening this cut improves signal purity at the cost of efficiency."
+        ),
     ),
     CutDef(
-        key="pT3", label=r"$p_{T3}$", unit="GeV", direction=">",
-        default=15.0, range=(0.0, 60.0), step=1.0,
-        description="Minimum pT of the third (softest) lepton.",
+        key="pT3", label=r"$p_{T3}$", plain_label="pT3 (third lepton)",
+        unit="GeV", direction=">",
+        default=10.0, range=(0.0, 60.0), step=1.0,
+        description=(
+            "Minimum pT of the third (softest) lepton [GeV]. "
+            "This is typically the lepton from the W decay. "
+            "Z+jets backgrounds often have a soft fake third lepton."
+        ),
     ),
     CutDef(
-        key="MET", label=r"$E_T^{miss}$", unit="GeV", direction=">",
-        default=20.0, range=(0.0, 120.0), step=1.0,
-        description="Missing transverse energy — proxy for the neutrino from W decay.",
+        key="MET", label=r"$E_T^{\mathrm{miss}}$", plain_label="MET",
+        unit="GeV", direction=">",
+        default=20.0, range=(0.0, 200.0), step=1.0,
+        description=(
+            "Missing transverse energy [GeV] — proxy for the neutrino from W decay. "
+            "Real WZ events have large MET from the neutrino, while Z+jets events "
+            "tend to have lower MET (from jet mis-measurement)."
+        ),
     ),
     CutDef(
-        key="mT_W", label=r"$m_T^W$", unit="GeV", direction=">",
-        default=30.0, range=(0.0, 150.0), step=1.0,
-        description="Transverse mass of the W candidate (lepton + MET). "
-                    "Jacobian peak near m_W ≈ 80 GeV for real W bosons.",
+        key="mT_W", label=r"$m_T^W$", plain_label="mT(W)",
+        unit="GeV", direction=">",
+        default=30.0, range=(0.0, 200.0), step=1.0,
+        description=(
+            "Transverse mass of the W candidate [GeV]: "
+            "mT = sqrt(2 · pT_lep · MET · (1 − cos Δφ(lep, MET))). "
+            "For real W bosons this peaks near m_W ≈ 80 GeV (Jacobian peak). "
+            "Background events without a real W tend to have lower mT_W."
+        ),
     ),
     CutDef(
-        key="m_Z", label=r"$m_Z$", unit="GeV", direction="window",
-        default=0.0, range=(60.0, 120.0), step=0.5,
+        key="m_Z", label=r"$m_Z$", plain_label="m(Z)",
+        unit="GeV", direction="window",
+        default=0.0, range=(0.0, 200.0), step=1.0,
         default_lo=76.0, default_hi=106.0,
-        description="Invariant mass of the SFOS lepton pair (Z candidate). "
-                    "Select events inside the Z mass window.",
+        description=(
+            "Invariant mass of the SFOS lepton pair (Z candidate) [GeV]. "
+            "Select events inside the Z mass window around 91.2 GeV. "
+            "A tight window suppresses Z+jets and tt̄ backgrounds."
+        ),
     ),
     CutDef(
-        key="isolation", label=r"Isolation", unit="", direction="<",
-        default=0.5, range=(0.0, 2.0), step=0.02,
-        description="Track isolation of the leptons. "
-                    "Small values → well-isolated, prompt leptons.",
+        key="isolation", label=r"Isolation", plain_label="Isolation",
+        unit="", direction="<",
+        default=0.5, range=(0.0, 3.0), step=0.05,
+        description=(
+            "Relative track isolation: sum of track pT in a ΔR < 0.3 cone "
+            "around the lepton, divided by the lepton pT. "
+            "Prompt signal leptons are well-isolated (value ≈ 0). "
+            "Leptons from jets or non-prompt sources have larger values."
+        ),
     ),
     CutDef(
-        key="d0_sig", label=r"$|d_0|$ significance", unit="", direction="<",
-        default=5.0, range=(0.0, 10.0), step=0.1,
-        description="Transverse impact parameter significance. "
-                    "Small values → lepton originates from the primary vertex.",
+        key="d0_sig", label=r"$|d_0|$ significance", plain_label="|d0| significance",
+        unit="", direction="<",
+        default=5.0, range=(0.0, 20.0), step=0.2,
+        description=(
+            "Maximum transverse impact parameter significance |d0/sigma(d0)| "
+            "across the three leptons. "
+            "Prompt leptons (from W/Z decays) originate from the primary vertex "
+            "and have small |d0| significance. "
+            "Heavy-flavour backgrounds (tt-bar) have large values."
+        ),
     ),
 ]
 
@@ -89,7 +132,7 @@ VARIABLES = [c.key for c in CUT_DEFS]
 
 def apply_cuts(
     df: pd.DataFrame,
-    cut_values: dict,          # {key: value} or {key: (lo, hi)} for windows
+    cut_values: dict,           # {key: value} or {key: (lo, hi)} for windows
     exclude_key: str | None = None,  # omit one variable (for significance scan)
 ) -> pd.DataFrame:
     """
