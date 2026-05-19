@@ -99,7 +99,7 @@ CUT_DEFS: list[CutDef] = [
     CutDef(
         key="isolation", label=r"Isolation", plain_label="Isolation",
         unit="", direction="<",
-        default=0.5, range=(0.0, 3.0), step=0.05,
+        default=0.5, range=(0.0, 10.0), step=0.05,
         description=(
             "Relative track isolation: sum of track pT in a ΔR < 0.3 cone "
             "around the lepton, divided by the lepton pT. "
